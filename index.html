@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>EDS Emergency Console</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { background: #000; color: #fff; font-family: sans-serif; text-align: center; margin: 0; }
+        #status { background: #d32f2f; padding: 15px; font-weight: bold; }
+        video { width: 100%; max-height: 70vh; background: #111; border-bottom: 2px solid #333; }
+        .controls { padding: 20px; }
+        button { padding: 15px 30px; font-size: 16px; border-radius: 10px; border: none; background: #333; color: white; cursor: pointer; }
+        #safe-msg { display: none; padding: 100px 20px; background: #2e7d32; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="live-ui">
+        <div id="status">🚨 LIVE FEED ACTIVE</div>
+        <video id="remoteVideo" autoplay playsinline></video>
+        <div class="controls">
+            <button onclick="sendCmd('flip')">🔄 FLIP CAMERA</button>
+        </div>
+    </div>
+    <div id="safe-msg">
+        <h1>✅ USER VERIFIED SAFE</h1>
+        <p>The emergency session has been closed by the user.</p>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const phoneID = urlParams.get('id'); // Get ID from SMS link
+        const peer = new Peer(); 
+        let dataConn;
+
+        peer.on('open', (id) => {
+            // 1. Connect for Data (Commands)
+            dataConn = peer.connect(phoneID);
+            dataConn.on('data', (data) => {
+                if(data === 'USER_SAFE') {
+                    document.getElementById('live-ui').style.display = 'none';
+                    document.getElementById('safe-msg').style.display = 'block';
+                }
+            });
+            // 2. Call for Video
+            peer.call(phoneID, null).on('stream', (stream) => {
+                document.getElementById('remoteVideo').srcObject = stream;
+            });
+        });
+
+        function sendCmd(cmd) { if(dataConn) dataConn.send(cmd); }
+    </script>
+</body>
+</html>
